@@ -1,0 +1,60 @@
+name: gold-alert
+
+on:
+  schedule:
+    # 每 5 分钟检查一次（GitHub 的 cron 是尽力而为，高峰期可能延迟几分钟）
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      test_push:
+        description: "额外发一条测试推送，验证微信通道"
+        type: boolean
+        default: false
+
+# 允许提交 heartbeat.log，防止仓库 60 天无活动导致定时任务被自动暂停
+permissions:
+  contents: write
+
+concurrency:
+  group: gold-alert
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 取出仓库代码
+        uses: actions/checkout@v4
+
+      - name: 恢复上次的跨线标记（保证同方向只推一次）
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: gold-state-${{ github.run_id }}
+          restore-keys: |
+            gold-state-
+
+      - name: 检查金价并推送
+        env:
+          SCT_KEY: ${{ secrets.SCT_KEY }}
+          TEST_PUSH: ${{ github.event.inputs.test_push == 'true' && '1' || '' }}
+        run: python3 check_gold.py
+
+      - name: 保活（防 60 天无活动被暂停，每天提交一次）
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: |
+          TODAY=$(date -u +%F)
+          if ! tail -n 1 heartbeat.log 2>/dev/null | grep -q "$TODAY"; then
+            echo "$TODAY heartbeat" >> heartbeat.log
+            git config user.name "gold-alert-bot"
+            git config user.email "gold-alert-bot@users.noreply.github.com"
+            git add heartbeat.log
+            git commit -m "chore: heartbeat $TODAY [skip ci]"
+            git push
+          fi
+
+      - name: 显示当前跨线状态
+        if: always()
+        run: cat state.json 2>/dev/null || echo "（首次运行，还没有状态文件）"
