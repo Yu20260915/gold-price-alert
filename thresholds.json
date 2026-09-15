@@ -1,0 +1,22 @@
+{
+  "_说明": "云端金价提醒线。改这里的数字并提交（Commit）即生效，下一轮检查自动使用新值。above=涨破提醒，below=跌破提醒，填 null 表示不监控该方向。",
+  "_仓库": "GitHub Actions 每 5 分钟自动检查一次，跨线时推送微信（Server酱）。同一方向只推一次，价格回到区间内自动复位。",
+  "resetGapPct": 0.3,
+  "pageUrl": "https://gold-price-monitor-82504.app.workbuddy.host/",
+  "targets": [
+    {
+      "code": "XAU",
+      "name": "国际金价",
+      "unit": "美元/盎司",
+      "above": 4350,
+      "below": 4260
+    },
+    {
+      "code": "AU9999",
+      "name": "国内金价",
+      "unit": "元/克",
+      "above": 933,
+      "below": 920
+    }
+  ]
+}
