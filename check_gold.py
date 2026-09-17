@@ -107,11 +107,14 @@ def src_sina():
                                   "high": float(fields[4]) if len(fields) > 4 and fields[4] else 0,
                                   "low": float(fields[5]) if len(fields) > 5 and fields[5] else 0,
                                   "ts": int(time.time()), "name": "伦敦金"}
-                elif "gds_AU9999" in key and len(fields) >= 2 and fields[1]:
-                    out["AU9999"] = {"price": float(fields[1]), "pct": None, "chg": None,
-                                     "high": 0, "low": 0,
-                                     "ts": int(fields[-1]) if fields[-1].isdigit() else int(time.time()),
-                                     "name": "黄金9999"}
+                elif "gds_AU9999" in key and len(fields) >= 2 and fields[0]:
+                    # gds_ 格式：字段0=现价，字段1=今开（可能为 0，2026-09-17 实测踩坑，不能用字段1当现价）
+                    price = float(fields[0])
+                    if price > 0:
+                        out["AU9999"] = {"price": price, "pct": None, "chg": None,
+                                         "high": 0, "low": 0,
+                                         "ts": int(fields[-1]) if fields[-1].isdigit() else int(time.time()),
+                                         "name": "黄金9999"}
             except Exception:
                 continue        # 单条解析失败不影响其它品种
     except Exception as e:
@@ -246,6 +249,11 @@ def main():
             parts.append("%s 无行情" % name)
             continue
         price = q["price"]
+        if not price or price <= 0:
+            # 价格为 0 = 无效行情，绝不与提醒线比较，防止误报（2026-09-17 误报教训）
+            parts.append("%s 行情无效(%.2f)，跳过" % (name, price))
+            log("%s 行情无效，跳过比较" % name)
+            continue
         stale = q.get("ts") and (now_ts - q["ts"]) > 5400
         f = flags.get(code) or {"above": False, "below": False}
         events = []
