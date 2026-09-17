@@ -259,7 +259,7 @@ def main():
         flags[code] = f
 
         for kind, line in events:
-            title = "金价提醒 · %s %s %s 已%s %s" % (name, fmt(price), unit, kind, fmt(line))
+            title = "金价提醒·%s %s 已%s %s" % (name, fmt(price), kind, fmt(line))  # Server酱标题上限32字，故不带单位
             desp = "\n".join([
                 "**%s** 当前 **%s %s**" % (name, fmt(price), unit),
                 "",
