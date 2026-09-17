@@ -224,6 +224,17 @@ def main():
         return 1
     log("行情来源: %s | %s" % (src, {k: v["price"] for k, v in quotes.items()}))
 
+    meta = {t.get("code"): t for t in cfg.get("targets") or []}
+
+    def summary_line():
+        # 双品种行情摘要，恒放推送正文第一行（国内在前）
+        segs = []
+        for c in ("AU9999", "XAU"):
+            v, m = quotes.get(c), meta.get(c)
+            if v and v.get("price") and m:
+                segs.append("%s %s %s" % (m.get("name"), fmt(v["price"]), m.get("unit", "")))
+        return "当前：" + "｜".join(segs)
+
     now_ts = int(time.time())
     parts, pushed = [], []
 
@@ -259,8 +270,18 @@ def main():
         flags[code] = f
 
         for kind, line in events:
-            title = "金价提醒·%s %s 已%s %s" % (name, fmt(price), kind, fmt(line))  # Server酱标题上限32字，故不带单位
+            cn_q = quotes.get("AU9999") or {}
+            cn_price = fmt(cn_q["price"]) if cn_q.get("price") else None
+            if code == "AU9999":
+                title = "金价提醒·国内金价 %s 已%s %s" % (fmt(price), kind, fmt(line))
+            elif cn_price:
+                # 飞哥主看国内：国际触发时标题也带国内现价；Server酱标题上限32字，此格式最长约30
+                title = "金价提醒·国内金价 %s｜国际已%s %s" % (cn_price, kind, fmt(line))
+            else:
+                title = "金价提醒·%s %s 已%s %s" % (name, fmt(price), kind, fmt(line))
             desp = "\n".join([
+                summary_line(),
+                "",
                 "**%s** 当前 **%s %s**" % (name, fmt(price), unit),
                 "",
                 "- 触发条件：%s %s %s" % (kind, fmt(line), unit),
