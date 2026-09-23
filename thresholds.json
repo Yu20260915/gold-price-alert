@@ -8,8 +8,8 @@
       "code": "XAU",
       "name": "国际金价",
       "unit": "美元/盎司",
-      "above": 4350,
-      "below": 4260
+      "above": null,
+      "below": null
     },
     {
       "code": "AU9999",
